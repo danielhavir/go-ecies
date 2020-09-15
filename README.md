@@ -22,20 +22,30 @@ See [the installation script](https://gist.github.com/danielhavir/d8df1a260a2c04
 ### Uninstall Go
 See [the uninstallation script](https://gist.github.com/danielhavir/d8df1a260a2c042a01c48303ca3967c7)
 
-### Get Go's crypto library
+### Build without Go Modules (Go before 1.11)
+
 * Run `go get golang.org/x/crypto` (included Poly1305 MAC)
 
-## Build
 * Run `go build -o ./ecies *.go` to compile all related .go files
 
+### Build with Go Modules (Go 1.11 and later)
+
+```
+git clone https://github.com/danielhavir/go-ecies
+cd go-ecies
+go install ./go-ecies ;# installs at ~/go/bin/go-ecies
+
+# remember to add ~/go/bin to your env var PATH
+```
+
 ## Run
-* Run `./ecies -en -in=<input_file> -out=<output_file> -pub=<path_to_public_key>` for encryption
-* Run `./ecies -de -in=<input_file> -out=<output_file> -prv=<path_to_private_key>` for decryption
+* Run `ecies -en -in=<input_file> -out=<output_file> -pub=<path_to_public_key>` for encryption
+* Run `ecies -de -in=<input_file> -out=<output_file> -prv=<path_to_private_key>` for decryption
 * Optionally, you can also:
     * Use `-mode` to specify whether to use curve P-521 with AES-256 and SHA-512 (`-mode=P521`) or P-256 with AES-128 and SHA-256 (`-mode=P256`). SHA-512 or SHA-256 only applies to hashing, for MAC, Poly1305 is used in both cases.
     * Use the `-hex` flag to _encode encrypted ciphertext_ to hex encoding, or _decode ciphertext_ for decription from hex encoding. **IMPORTANT** You must specify the same mode for both encryption and decryption, otherwise, you will encounter "Incorrect public key" error.
     * Use the `-generate-key-pair` flag to generate new pair of private and public key. In such case, `-prv` and `-pub` specify the path for the generate private key, respectively public key
-* Alternatively, you can run: `./ecies -generate-key-pair -mode=<P256||P521> -prv=<output_private_key_path>  -pub=<output_public_key_path>` to generate new key pair
+* Alternatively, you can run: `ecies -generate-key-pair -mode=<P256||P521> -prv=<output_private_key_path>  -pub=<output_public_key_path>` to generate new key pair
 
 ### Default options
 * `-mode`: P256

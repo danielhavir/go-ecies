@@ -18,7 +18,7 @@
 	ecies.go Daniel Havir, 2018
 */
 
-package main
+package ecies
 
 import (
 	"crypto/aes"

@@ -26,6 +26,8 @@ import (
 	"flag"
 	"fmt"
 	"math/big"
+
+	"github.com/udhos/go-ecies/ecies"
 )
 
 func main() {
@@ -45,8 +47,8 @@ func main() {
 		return
 	}
 
-	var private PrivateKey
-	var public PublicKey
+	var private ecies.PrivateKey
+	var public ecies.PublicKey
 	var curve elliptic.Curve
 	reader := rand.Reader
 	if *mode == "P521" {
@@ -56,7 +58,7 @@ func main() {
 	}
 
 	if *genKey {
-		private = *GenerateKey(reader, curve)
+		private = *ecies.GenerateKey(reader, curve)
 		public = private.PublicKey
 		writehexfile(private.D.Bytes(), *privatePath)
 		writehexfile(elliptic.Marshal(curve, public.X, public.Y), *publicPath)
@@ -64,10 +66,10 @@ func main() {
 	} else {
 		if *encrypt {
 			X, Y := elliptic.Unmarshal(curve, readhexfile(*publicPath))
-			public = PublicKey{X: X, Y: Y, Curve: curve}
+			public = ecies.PublicKey{X: X, Y: Y, Curve: curve}
 		} else if *decrypt {
 			public.Curve = curve
-			private = PrivateKey{PublicKey: public,
+			private = ecies.PrivateKey{PublicKey: public,
 				D: new(big.Int).SetBytes(readhexfile(*privatePath))}
 		}
 	}
@@ -81,7 +83,7 @@ func main() {
 
 	if *encrypt {
 		intext = readfile(*inputPath)
-		outtext := Encrypt(reader, &public, intext, nil, nil)
+		outtext := ecies.Encrypt(reader, &public, intext, nil, nil)
 		if *useHex {
 			writehexfile(outtext, *outputPath)
 		} else {
@@ -93,7 +95,7 @@ func main() {
 		} else {
 			intext = readfile(*inputPath)
 		}
-		outtext := Decrypt(&private, intext, nil, nil)
+		outtext := ecies.Decrypt(&private, intext, nil, nil)
 		writefile(outtext, *outputPath)
 	}
 }
