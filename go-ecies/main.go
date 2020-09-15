@@ -58,7 +58,12 @@ func main() {
 	}
 
 	if *genKey {
-		private = *ecies.GenerateKey(reader, curve)
+		priv, errPriv := ecies.GenerateKey(reader, curve)
+		if errPriv != nil {
+			fmt.Println(errPriv)
+			return
+		}
+		private = *priv
 		public = private.PublicKey
 		writehexfile(private.D.Bytes(), *privatePath)
 		writehexfile(elliptic.Marshal(curve, public.X, public.Y), *publicPath)
@@ -83,7 +88,11 @@ func main() {
 
 	if *encrypt {
 		intext = readfile(*inputPath)
-		outtext := ecies.Encrypt(reader, &public, intext, nil, nil)
+		outtext, errEncrypt := ecies.Encrypt(reader, &public, intext, nil, nil)
+		if errEncrypt != nil {
+			fmt.Println(errEncrypt)
+			return
+		}
 		if *useHex {
 			writehexfile(outtext, *outputPath)
 		} else {
@@ -95,7 +104,11 @@ func main() {
 		} else {
 			intext = readfile(*inputPath)
 		}
-		outtext := ecies.Decrypt(&private, intext, nil, nil)
+		outtext, errDecrypt := ecies.Decrypt(&private, intext, nil, nil)
+		if errDecrypt != nil {
+			fmt.Println(errDecrypt)
+			return
+		}
 		writefile(outtext, *outputPath)
 	}
 }
