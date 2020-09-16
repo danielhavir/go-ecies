@@ -24,11 +24,17 @@ See [the uninstallation script](https://gist.github.com/danielhavir/d8df1a260a2c
 
 ### Build without Go Modules (Go before 1.11)
 
-* Run `go get golang.org/x/crypto` (included Poly1305 MAC)
+```
+export GO111MODULE=off ;# you might need this to disable module for recent Go versions
 
-* Run `go build -o ./ecies *.go` to compile all related .go files
+go get golang.org/x/crypto ;# included Poly1305 MAC
 
-* Copy `./ecies` to your search path. For instance: `cp ./ecies ~/bin`
+go get github.com/danielhavir/go-ecies ;# grab go-ecies
+
+go build -o ~/go/bin/ecies github.com/danielhavir/go-ecies ;# install as ~/go/bin/ecies
+
+# remember to add ~/go/bin to your env var PATH: PATH=$PATH:$HOME/go/bin
+```
 
 ### Build with Go Modules (Go 1.11 and later)
 
