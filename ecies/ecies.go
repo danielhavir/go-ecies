@@ -23,10 +23,12 @@ package ecies
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"math/big"
@@ -239,4 +241,35 @@ func Decrypt(private *PrivateKey, in, s1, s2 []byte) ([]byte, error) {
 
 	out, errDec := decryptSymmetric(in[messageStart:messageEnd], Ke)
 	return out, errDec
+}
+
+// ImportECDSA imports ECDSA private key.
+func ImportECDSA(privKey *ecdsa.PrivateKey) (*PrivateKey, error) {
+
+	curve := privKey.Curve
+	if curve != elliptic.P256() {
+		return nil, fmt.Errorf("ImportECDSA: only ECDSA P256 is supported")
+	}
+
+	pubKey := PublicKey{Curve: curve}
+
+	privateKey := PrivateKey{
+		PublicKey: pubKey,
+		D:         new(big.Int).SetBytes(privKey.D.Bytes()),
+	}
+
+	return &privateKey, nil
+}
+
+// ImportECDSAPublic imports ECDSA public key.
+func ImportECDSAPublic(pubKey *ecdsa.PublicKey) (*PublicKey, error) {
+
+	curve := pubKey.Curve
+	if curve != elliptic.P256() {
+		return nil, fmt.Errorf("ImportECDSAPublic: only ECDSA P256 is supported")
+	}
+
+	publicKey := PublicKey{X: pubKey.X, Y: pubKey.Y, Curve: curve}
+
+	return &publicKey, nil
 }

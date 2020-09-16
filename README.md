@@ -41,6 +41,7 @@ go build -o ~/go/bin/ecies github.com/danielhavir/go-ecies ;# install as ~/go/bi
 ```
 git clone https://github.com/danielhavir/go-ecies
 cd go-ecies
+go test ./ecies ;# run tests
 go install ./cmd/ecies ;# install as ~/go/bin/ecies
 
 # remember to add ~/go/bin to your env var PATH: PATH=$PATH:$HOME/go/bin
