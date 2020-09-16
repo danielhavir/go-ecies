@@ -28,14 +28,16 @@ See [the uninstallation script](https://gist.github.com/danielhavir/d8df1a260a2c
 
 * Run `go build -o ./ecies *.go` to compile all related .go files
 
+* Copy `./ecies` to your search path. For instance: `cp ./ecies ~/bin`
+
 ### Build with Go Modules (Go 1.11 and later)
 
 ```
 git clone https://github.com/danielhavir/go-ecies
 cd go-ecies
-go install ./go-ecies ;# installs at ~/go/bin/go-ecies
+go install ./cmd/ecies ;# install as ~/go/bin/ecies
 
-# remember to add ~/go/bin to your env var PATH
+# remember to add ~/go/bin to your env var PATH: PATH=$PATH:$HOME/go/bin
 ```
 
 ## Run
@@ -57,12 +59,12 @@ go install ./go-ecies ;# installs at ~/go/bin/go-ecies
 * `-out`: out.out
 
 ### Examples
-* `./ecies -en -in=file.txt -out=out.out -generate-key-pair -hex -mode=P521` generates new private and public key storred as _key.pem_ and _key.pub_ encrypts file.txt to hexadecimal out.out using mode P521.
-* `./ecies -de -in=out.out -out=decrypted.txt -hex -mode=P521` decrypts hexadecimal out.out into decrypted.txt using default _key.pem_ (public key not required for decryption).
-* `./ecies -generate-key-pair -prv=p256-key.pem -pub=p256-key.pub` generates new key pair for EC P-256 and saves the keys in "p256-key.pem" and "p256-key.pub".
+* `ecies -en -in=file.txt -out=out.out -generate-key-pair -hex -mode=P521` generates new private and public key storred as _key.pem_ and _key.pub_ encrypts file.txt to hexadecimal out.out using mode P521.
+* `ecies -de -in=out.out -out=decrypted.txt -hex -mode=P521` decrypts hexadecimal out.out into decrypted.txt using default _key.pem_ (public key not required for decryption).
+* `ecies -generate-key-pair -prv=p256-key.pem -pub=p256-key.pub` generates new key pair for EC P-256 and saves the keys in "p256-key.pem" and "p256-key.pub".
 
 ### Help
-* For more info run `./ecies -h`
+* For more info run `ecies -h`
 
 ## References
 * Aumasson, J.P. - Serious Cryptography: A Practical Introduction to Modern Encryption
