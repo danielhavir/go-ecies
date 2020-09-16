@@ -21,57 +21,14 @@
 package ecies
 
 import (
-	hex "encoding/hex"
 	"io"
-	"io/ioutil"
 	"strconv"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func readfile(path string) []byte {
-	dat, err := ioutil.ReadFile(path)
-	check(err)
-	return dat
-}
-
-func writefile(text []byte, path string) {
-	err := ioutil.WriteFile(path, text, 0664)
-	check(err)
-}
-
-func decodehex(src []byte) []byte {
-	dst := make([]byte, hex.DecodedLen(len(src)))
-	hex.Decode(dst, src)
-	return dst
-}
-
-func encodehex(src []byte) []byte {
-	dst := make([]byte, hex.EncodedLen(len(src)))
-	hex.Encode(dst, src)
-	return dst
-}
-
-func readhexfile(path string) []byte {
-	src := readfile(path)
-	dst := decodehex(src)
-	return dst
-}
-
-func writehexfile(src []byte, path string) {
-	text := encodehex(src)
-	writefile(text, path)
-}
-
-func getCryptoRandVec(rand io.Reader, len int) []byte {
+func getCryptoRandVec(rand io.Reader, len int) ([]byte, error) {
 	out := make([]byte, len)
 	_, err := io.ReadFull(rand, out)
-	check(err)
-	return out
+	return out, err
 }
 
 func to32ByteArray(in []byte) *[32]byte {

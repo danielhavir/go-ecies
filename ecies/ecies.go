@@ -103,7 +103,10 @@ func encryptSymmetric(rand io.Reader, in, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	nonce := getCryptoRandVec(rand, aes.BlockSize)
+	nonce, errRand := getCryptoRandVec(rand, aes.BlockSize)
+	if errRand != nil {
+		return nil, errRand
+	}
 	cipher := cipher.NewCTR(block, nonce)
 
 	out := make([]byte, len(in))

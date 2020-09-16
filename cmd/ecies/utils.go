@@ -22,9 +22,7 @@ package main
 
 import (
 	"encoding/hex"
-	"io"
 	"io/ioutil"
-	"strconv"
 )
 
 func check(e error) {
@@ -65,35 +63,4 @@ func readhexfile(path string) []byte {
 func writehexfile(src []byte, path string) {
 	text := encodehex(src)
 	writefile(text, path)
-}
-
-func getCryptoRandVec(rand io.Reader, len int) []byte {
-	out := make([]byte, len)
-	_, err := io.ReadFull(rand, out)
-	check(err)
-	return out
-}
-
-func to32ByteArray(in []byte) *[32]byte {
-	if len(in) != 32 {
-		panic("Input array size does not match. Expected 32, but got " + strconv.Itoa(len(in)))
-	}
-	var out [32]byte
-	for i := 0; i < 32; i++ {
-		out[i] = in[i]
-	}
-
-	return &out
-}
-
-func to16ByteArray(in []byte) *[16]byte {
-	if len(in) != 16 {
-		panic("Input array size does not match. Expected 16, but got " + strconv.Itoa(len(in)))
-	}
-	var out [16]byte
-	for i := 0; i < 16; i++ {
-		out[i] = in[i]
-	}
-
-	return &out
 }
