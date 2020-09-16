@@ -113,16 +113,18 @@ func encryptSymmetric(rand io.Reader, in, key []byte) ([]byte, error) {
 	return out, nil
 }
 
-func decryptSymmetric(in, key []byte) []byte {
+func decryptSymmetric(in, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 
 	cipher := cipher.NewCTR(block, in[:aes.BlockSize])
 
 	out := make([]byte, len(in)-aes.BlockSize)
 	cipher.XORKeyStream(out, in[aes.BlockSize:])
 
-	return out
+	return out, nil
 }
 
 // Encrypt is a function for encryption
@@ -232,6 +234,6 @@ func Decrypt(private *PrivateKey, in, s1, s2 []byte) ([]byte, error) {
 		return nil, errors.New("Message tags don't match")
 	}
 
-	out := decryptSymmetric(in[messageStart:messageEnd], Ke)
-	return out, nil
+	out, errDec := decryptSymmetric(in[messageStart:messageEnd], Ke)
+	return out, errDec
 }

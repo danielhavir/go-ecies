@@ -21,7 +21,7 @@
 package main
 
 import (
-	hex "encoding/hex"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"strconv"
