@@ -179,6 +179,11 @@ func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) ([]byte, erro
 
 // Decrypt is a function for decryption
 func Decrypt(private *PrivateKey, in, s1, s2 []byte) ([]byte, error) {
+
+	if len(in) == 0 {
+		return nil, errors.New("Invalid empty message")
+	}
+
 	curveName := private.PublicKey.Curve.Params().Name
 	var hashFunc hash.Hash
 	if curveName == "P-521" {
