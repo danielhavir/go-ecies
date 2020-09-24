@@ -18,14 +18,17 @@
 	ecies.go Daniel Havir, 2018
 */
 
-package main
+package ecies
 
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/sha512"
+	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"math/big"
@@ -47,30 +50,32 @@ type PrivateKey struct {
 }
 
 // GenerateKey is the constructor for Private-Public key pair
-func GenerateKey(rand io.Reader, curve elliptic.Curve) *PrivateKey {
+func GenerateKey(rand io.Reader, curve elliptic.Curve) (*PrivateKey, error) {
 	privateBytes, x, y, err := elliptic.GenerateKey(curve, rand)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 	public := PublicKey{X: x, Y: y, Curve: curve}
 	private := PrivateKey{PublicKey: public, D: new(big.Int).SetBytes(privateBytes)}
-	return &private
+	return &private, nil
 }
 
 // DeriveShared is method to derive a shared secret
-func (private *PrivateKey) DeriveShared(public *PublicKey, keySize int) []byte {
+func (private *PrivateKey) DeriveShared(public *PublicKey, keySize int) ([]byte, error) {
 	if private.PublicKey.Curve != public.Curve {
-		panic("Curves don't match")
+		return nil, errors.New("Curves don't match")
 	}
 	if 2*keySize > (public.Curve.Params().BitSize+7)/8 {
-		panic("Shared key length is too long")
+		return nil, errors.New("Shared key length is too long")
 	}
 
 	x, _ := public.Curve.ScalarMult(public.X, public.Y, private.D.Bytes())
 	if x == nil {
-		panic("Scalar multiplication resulted in infinity")
+		return nil, errors.New("Scalar multiplication resulted in infinity")
 	}
 
 	shared := x.Bytes()
-	return shared
+	return shared, nil
 }
 
 // Key-Derivation Function
@@ -94,35 +99,45 @@ func verifyTag(mac *[16]byte, in, shared []byte, key *[32]byte) bool {
 	return poly1305.Verify(mac, append(in, shared...), key)
 }
 
-func encryptSymmetric(rand io.Reader, in, key []byte) []byte {
+func encryptSymmetric(rand io.Reader, in, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 
-	nonce := getCryptoRandVec(rand, aes.BlockSize)
+	nonce, errRand := getCryptoRandVec(rand, aes.BlockSize)
+	if errRand != nil {
+		return nil, errRand
+	}
 	cipher := cipher.NewCTR(block, nonce)
 
 	out := make([]byte, len(in))
 	cipher.XORKeyStream(out, in)
 
 	out = append(nonce, out...)
-	return out
+	return out, nil
 }
 
-func decryptSymmetric(in, key []byte) []byte {
+func decryptSymmetric(in, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 
 	cipher := cipher.NewCTR(block, in[:aes.BlockSize])
 
 	out := make([]byte, len(in)-aes.BlockSize)
 	cipher.XORKeyStream(out, in[aes.BlockSize:])
 
-	return out
+	return out, nil
 }
 
 // Encrypt is a function for encryption
-func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) []byte {
-	private := GenerateKey(rand, public.Curve)
+func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) ([]byte, error) {
+	private, errGen := GenerateKey(rand, public.Curve)
+	if errGen != nil {
+		return nil, errGen
+	}
 
 	curveName := public.Curve.Params().Name
 	var hashFunc hash.Hash
@@ -133,7 +148,10 @@ func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) []byte {
 	}
 	keySize := hashFunc.Size() / 2
 
-	shared := private.DeriveShared(public, keySize)
+	shared, errShared := private.DeriveShared(public, keySize)
+	if errShared != nil {
+		return nil, errShared
+	}
 	K := kdf(hashFunc, shared, s1)
 	Ke := K[:keySize]
 	Km := K[keySize:]
@@ -144,7 +162,10 @@ func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) []byte {
 		hashFunc.Reset()
 	}
 
-	c := encryptSymmetric(rand, in, Ke)
+	c, errEnc := encryptSymmetric(rand, in, Ke)
+	if errEnc != nil {
+		return nil, errEnc
+	}
 
 	tag := sumTag(c, s2, to32ByteArray(Km))
 
@@ -153,11 +174,16 @@ func Encrypt(rand io.Reader, public *PublicKey, in, s1, s2 []byte) []byte {
 	copy(out, R)
 	copy(out[len(R):], c)
 	copy(out[len(R)+len(c):], tag[:])
-	return out
+	return out, nil
 }
 
 // Decrypt is a function for decryption
-func Decrypt(private *PrivateKey, in, s1, s2 []byte) []byte {
+func Decrypt(private *PrivateKey, in, s1, s2 []byte) ([]byte, error) {
+
+	if len(in) == 0 {
+		return nil, errors.New("Invalid empty message")
+	}
+
 	curveName := private.PublicKey.Curve.Params().Name
 	var hashFunc hash.Hash
 	if curveName == "P-521" {
@@ -173,10 +199,10 @@ func Decrypt(private *PrivateKey, in, s1, s2 []byte) []byte {
 	if in[0] == 2 || in[0] == 3 || in[0] == 4 {
 		messageStart = (private.PublicKey.Curve.Params().BitSize + 7) / 4
 		if len(in) < (messageStart + macLen + 1) {
-			panic("Invalid message")
+			return nil, errors.New("Invalid message")
 		}
 	} else {
-		panic("Invalid public key")
+		return nil, errors.New("Invalid public key")
 	}
 
 	if curveName == "P-521" {
@@ -191,13 +217,16 @@ func Decrypt(private *PrivateKey, in, s1, s2 []byte) []byte {
 	R.Curve = private.PublicKey.Curve
 	R.X, R.Y = elliptic.Unmarshal(R.Curve, in[:messageStart])
 	if R.X == nil {
-		panic("Invalid public key. Maybe you didn't specify the right mode?")
+		return nil, errors.New("Invalid public key. Maybe you didn't specify the right mode?")
 	}
 	if !R.Curve.IsOnCurve(R.X, R.Y) {
-		panic("Invalid curve")
+		return nil, errors.New("Invalid curve")
 	}
 
-	shared := private.DeriveShared(R, keySize)
+	shared, errShared := private.DeriveShared(R, keySize)
+	if errShared != nil {
+		return nil, errShared
+	}
 
 	K := kdf(hashFunc, shared, s1)
 
@@ -212,9 +241,40 @@ func Decrypt(private *PrivateKey, in, s1, s2 []byte) []byte {
 
 	match := verifyTag(to16ByteArray(in[messageEnd:]), in[messageStart:messageEnd], s2, to32ByteArray(Km))
 	if !match {
-		panic("Message tags don't match")
+		return nil, errors.New("Message tags don't match")
 	}
 
-	out := decryptSymmetric(in[messageStart:messageEnd], Ke)
-	return out
+	out, errDec := decryptSymmetric(in[messageStart:messageEnd], Ke)
+	return out, errDec
+}
+
+// ImportECDSA imports ECDSA private key.
+func ImportECDSA(privKey *ecdsa.PrivateKey) (*PrivateKey, error) {
+
+	curve := privKey.Curve
+	if curve != elliptic.P256() {
+		return nil, fmt.Errorf("ImportECDSA: only ECDSA P256 is supported")
+	}
+
+	pubKey := PublicKey{Curve: curve}
+
+	privateKey := PrivateKey{
+		PublicKey: pubKey,
+		D:         new(big.Int).SetBytes(privKey.D.Bytes()),
+	}
+
+	return &privateKey, nil
+}
+
+// ImportECDSAPublic imports ECDSA public key.
+func ImportECDSAPublic(pubKey *ecdsa.PublicKey) (*PublicKey, error) {
+
+	curve := pubKey.Curve
+	if curve != elliptic.P256() {
+		return nil, fmt.Errorf("ImportECDSAPublic: only ECDSA P256 is supported")
+	}
+
+	publicKey := PublicKey{X: pubKey.X, Y: pubKey.Y, Curve: curve}
+
+	return &publicKey, nil
 }
